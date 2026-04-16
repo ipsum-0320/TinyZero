@@ -5,6 +5,7 @@ import operator
 
 
 def extract_solution(solution_str):
+    # 从模型生成的回复中提取答案方程
     """Extract the equation from the solution string."""
     # Remove everything before the first "Assistant:"
     if "Assistant:" in solution_str:
@@ -25,7 +26,9 @@ def extract_solution(solution_str):
     return final_answer
 
 
+
 def validate_equation(equation_str, available_numbers):
+    # 验证方程是否用了正确的数字
     """Validate that equation only uses available numbers and each number once."""
     try:
         # Extract all numbers from the equation
@@ -42,6 +45,7 @@ def validate_equation(equation_str, available_numbers):
 
 
 def evaluate_equation(equation_str):
+    # 安全地计算方程结果
     """Safely evaluate the arithmetic equation using eval() with precautions."""
     try:
         # Define a regex pattern that only allows numbers, operators, parentheses, and whitespace
@@ -79,6 +83,7 @@ def compute_score(solution_str, ground_truth, method='strict', format_score=0.1,
         print(f"Solution string: {solution_str}")
 
     if equation is None:
+        # 模型没按格式输出，无法提取 answer 标签，直接给 0 分。
         if do_print:
             print(f"No equation found")
         return 0
@@ -87,6 +92,8 @@ def compute_score(solution_str, ground_truth, method='strict', format_score=0.1,
     if not validate_equation(equation, numbers):
         if do_print:
             print(f"Invalid equation")
+        # 方程用了错误/多余数字，格式对了但用了非法数字。
+        # 给 0.1 分。
         return format_score
         
     # Evaluate equation
@@ -100,8 +107,11 @@ def compute_score(solution_str, ground_truth, method='strict', format_score=0.1,
         if abs(result - target) < 1e-5:  # Account for floating point precision
             if do_print:
                 print(f"Correct equation: {equation} = {result}")
+            # 全部正确，给出满分 1 分。
             return score
         else:
+            # 方程可计算但结果错误，格式对了但算错了
+            # 给 0.1 分。
             if do_print:
                 print(f"Wrong result: equation = {result}, target = {target}")
             return format_score

@@ -21,18 +21,40 @@ from verl.utils.reward_score import gsm8k, math, multiply, countdown
 from verl.trainer.ppo.ray_trainer import RayPPOTrainer
 
 
+# 这行代码定义了一个奖励函数选择器，根据数据集来源返回对应的评分函数。
 def _select_rm_score_fn(data_source):
+    # 参数 data_source：标识数据来源的字符串（如 'openai/gsm8k'、'countdown' 等）
+    # 返回值：对应的 compute_score 函数
     if data_source == 'openai/gsm8k':
+        # GSM8K 数学题
         return gsm8k.compute_score
     elif data_source == 'lighteval/MATH':
+        # MATH 数学题
         return math.compute_score
     elif "multiply" in data_source or "arithmetic" in data_source:
+        # 乘法/算术任务
         return multiply.compute_score
     elif "countdown" in data_source:
+        # Countdown 任务
         return countdown.compute_score
     else:
         raise NotImplementedError
+# 在这个项目中，_select_rm_score_fn 及其定义的奖励函数才是关键。
+# 1. verl (veRL 框架) — PPO 训练循环、分布式 workers。
+# 2. vllm — 高效的推理引擎。
+# 3. Ray — 多 GPU/多节点分布式协调。
+# 4. 数据预处理 — 将原始数据转换为 RL 可用的格式。
 
+# 这些基础设施写好后一般是不会变更的，奖励函数才是任务相关且需要专门设计的。
+# 1. 找对应的奖励函数（已有的话直接用，没有的话自己写。
+# 2. 准备数据（格式对齐）。
+# 3. 跑通训练流程。
+
+# 这里提供了四种数据集，且都是从同一个基座模型（如 Qwen2.5-3B）开始微调的。
+# 但说实话，TinyZero 项目本身只需要跑 1-2 个数据集（Countdown 和 Multiply），这才是它复现 DeepSeek R1 Zero 的核心任务。
+# 所以你不需要跑四个数据集。如果你想复现 TinyZero 的核心发现，只跑 Countdown/Multiply 就够了。
+
+# 作者给出了实验日志：https://wandb.ai/jiayipan/TinyZero?nw=nwuserjiayipan。
 
 class RewardManager():
     """The reward manager.
@@ -77,6 +99,7 @@ class RewardManager():
             data_source = data_item.non_tensor_batch['data_source']
             compute_score_fn = _select_rm_score_fn(data_source)
 
+            # 生成分数。
             score = compute_score_fn(solution_str=sequences_str, ground_truth=ground_truth)
             reward_tensor[i, valid_response_length - 1] = score
 
